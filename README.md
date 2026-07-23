@@ -50,10 +50,10 @@ Preparing for technical coding interviews on platforms like LeetCode or Geeksfor
 ### 🖼️ Application Interfaces
 
 #### Dark Mode Dashboard
-![Dark Mode Dashboard](./images/Dashboard%20Dark.png)
+![Dark Mode Dashboard](./Images/Dashboard%20Dark.png)
 
 #### Light Mode Dashboard
-![Light Mode Dashboard](./images/Dashboard%20Light.png)
+![Light Mode Dashboard](./Images/Dashboard%20Light.png)
 
 ---
 
@@ -103,7 +103,7 @@ Preparing for technical coding interviews on platforms like LeetCode or Geeksfor
 6. **Start Learning**: Your key is stored strictly in your browser's private `localStorage`. You can now use all 5 AI Mentor modules seamlessly!
 
 ### 🖼️ Settings API Key Interface
-![Gemini API Key Configuration](./images/Gemini%20Api-Key.png)
+![Gemini API Key Configuration](./Images/Gemini%20Api-Key.png)
 
 ---
 
