@@ -184,7 +184,13 @@ Distributed under the **MIT License**.
 - **LinkedIn**: [https://www.linkedin.com/in/sriniwas-awasthi210728/](https://www.linkedin.com/in/sriniwas-awasthi210728/)
 - **Project Link**: [https://github.com/SriniwasAwasthi/Java-DSA-tracker](https://github.com/SriniwasAwasthi/Java-DSA-tracker)
 
----
-
 ### ⭐ Star the Repository!
 If `Java-DSA-tracker` helped your Java DSA journey or coding interview preparation, please give this repository a **Star** ⭐️!
+
+---
+
+## 💖 Heartfelt Thanks to Visitors & Viewers
+
+Thank you so much from the bottom of my heart for spending your valuable time exploring my GitHub portfolio 💼 and analyzing the **Java DSA Journey Tracker** project 🚀! It is a true privilege to share my work with you 🌟, and I deeply appreciate the effort and attention you took to review the features ⚙️, UI design 🎨, and code implementation 💻.
+
+Whether you visited to review my technical skillset 🛠️, explore the codebase 🔍, or use the tool for your own DSA preparation 📚, I am sincerely grateful for your support 💖. Please feel free to star this repository ⭐️ or reach out via LinkedIn 🌐. Thank you for your precious time and have a wonderful, successful day ahead! ☕️🌈✨
