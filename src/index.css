@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Comic Sans MS", "Century", "Bell MT", "Times New Roman", sans-serif;
+  --font-mono: "Comic Sans MS", "Century", "Bell MT", "Times New Roman", sans-serif;
+  --font-comic: "Comic Sans MS", "Chalkboard SE", "Comic Neue", cursive, sans-serif;
+  --font-century: "Century", "Century Schoolbook", serif;
+  --font-bell: "Bell MT", "Georgia", serif;
+  --font-times: "Times New Roman", Times, serif;
+}
+
+*, body, button, input, select, textarea {
+  font-family: "Comic Sans MS", "Century", "Bell MT", "Times New Roman", sans-serif !important;
+}
+
+body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure all scroll containers are touch-scroll friendly and have visible scrollbar behaviors */
+.overflow-y-auto {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.overflow-x-auto {
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+

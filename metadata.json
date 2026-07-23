@@ -1,0 +1,6 @@
+{
+  "name": "Java & DSA Journey Tracker",
+  "description": "A premium, study-focused personal learning platform and adaptive roadmap planner for mastering Java and Data Structures & Algorithms.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
