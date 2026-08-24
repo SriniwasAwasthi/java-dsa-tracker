@@ -197,19 +197,21 @@ Whether you visited to review my technical skillset 🛠️, explore the codebas
 
 ---
 
-## 💖 Thank You for Visiting!
+---
 
-> *"Thank you so much for taking the time to explore Java DSA Tracker!"* 🌟
+## 💖 Thank You for Exploring Java DSA Tracker!
 
-Taking your precious time to inspect this project, walk through the features, and review my code means the world to me. Every single repository I build is an opportunity to learn, innovate, and push the boundaries of software engineering.
+> *"Mastering algorithms one concept at a time—thank you for your support!"* ⚡
 
-- 🌟 **Enjoyed the project?** Feel free to leave a **Star** on this repository—your support provides immense motivation to keep building exciting projects!
-- 📬 **Let's Connect:** I am always open to constructive feedback, technical discussions, and exciting engineering opportunities. Feel free to explore my other repositories or connect with me directly on [GitHub](https://github.com/SriniwasAwasthi).
+Thank you for taking the time to review the Java DSA Tracker! Building an adaptive revision engine that pairs spaced repetition with Google Gemini AI mentorship was engineered to make rigorous technical interview preparation consistent and structured. Your review and attention mean the world to me.
 
-*Wishing you a wonderful day ahead, and thank you once again for stopping by!* ✨
+- 🌟 **Grinding DSA or prepping for interviews?** Star this repository to support open-source coding interview tools!
+- 📬 **Let's Connect:** I'm always eager to discuss algorithmic problem solving, Java optimization, and interview strategies. Find me on [GitHub](https://github.com/SriniwasAwasthi).
+
+*Wishing you clean syntax, $O(1)$ complexity, and tremendous success in your technical interviews!* ✨
 
 ---
 
 <div align="center">
-  <sub>Crafted with passion by <a href="https://github.com/SriniwasAwasthi">Sriniwas Awasthi</a>.</sub>
+  <sub>Engineered for algorithmic mastery and interview success by <a href="https://github.com/SriniwasAwasthi">Sriniwas Awasthi</a>.</sub>
 </div>
