@@ -194,3 +194,22 @@ If `Java-DSA-tracker` helped your Java DSA journey or coding interview preparati
 Thank you so much from the bottom of my heart for spending your valuable time exploring my GitHub portfolio 💼 and analyzing the **Java DSA Journey Tracker** project 🚀! It is a true privilege to share my work with you 🌟, and I deeply appreciate the effort and attention you took to review the features ⚙️, UI design 🎨, and code implementation 💻.
 
 Whether you visited to review my technical skillset 🛠️, explore the codebase 🔍, or use the tool for your own DSA preparation 📚, I am sincerely grateful for your support 💖. Please feel free to star this repository ⭐️ or reach out via LinkedIn 🌐. Thank you for your precious time and have a wonderful, successful day ahead! ☕️🌈✨
+
+---
+
+## 💖 Thank You for Visiting!
+
+> *"Thank you so much for taking the time to explore Java DSA Tracker!"* 🌟
+
+Taking your precious time to inspect this project, walk through the features, and review my code means the world to me. Every single repository I build is an opportunity to learn, innovate, and push the boundaries of software engineering.
+
+- 🌟 **Enjoyed the project?** Feel free to leave a **Star** on this repository—your support provides immense motivation to keep building exciting projects!
+- 📬 **Let's Connect:** I am always open to constructive feedback, technical discussions, and exciting engineering opportunities. Feel free to explore my other repositories or connect with me directly on [GitHub](https://github.com/SriniwasAwasthi).
+
+*Wishing you a wonderful day ahead, and thank you once again for stopping by!* ✨
+
+---
+
+<div align="center">
+  <sub>Crafted with passion by <a href="https://github.com/SriniwasAwasthi">Sriniwas Awasthi</a>.</sub>
+</div>
