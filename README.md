@@ -107,7 +107,7 @@ Whether you are a recruiter evaluating my technical skillset, a fellow developer
 
 * 🌟 **Found this helpful?** Please consider giving this repository a **Star** to support the project!
 * 📬 **Let's Connect & Collaborate:** I am actively seeking Software Engineering internships, full-stack roles, and open-source collaborations.
-  * 🌐 **LinkedIn:** [sriniwas-awasthi210728](https://www.linkedin.com/in/sriniwas-awasthi210728/)
+  * 🌐 **LinkedIn:** [sriniwas-awasthi](https://www.linkedin.com/in/sriniwas-awasthi/)
   * 💻 **GitHub:** [@SriniwasAwasthi](https://github.com/SriniwasAwasthi)
   * 📧 **Email:** [sriawasthi164@gmail.com](mailto:sriawasthi164@gmail.com)
 
