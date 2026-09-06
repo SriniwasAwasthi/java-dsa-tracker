@@ -148,6 +148,18 @@ Open your browser at 👉 `http://localhost:3000/`
 
 ---
 
+## 🏛️ System Architecture
+
+```mermaid
+graph TD
+    User["👤 Student / Candidate"] --> UI["💻 React UI & Monaco Code Editor"]
+    UI --> API["⚡ Next.js API Router"]
+    API --> Gemini["🧠 Google Gemini 3.7 AI Mentorship"]
+    API --> SM2["📐 SuperMemo-2 Spaced Repetition Scheduler"]
+    SM2 --> DB[("🗄️ PostgreSQL / SQLite Store")]
+    Gemini -->|Real-Time Code Analysis| UI
+```
+
 ## 🛠️ Tech Stack & Folder Structure
 
 - **Frontend**: React 19, TypeScript 5.8, Tailwind CSS v4, Motion (Framer Motion v12), Lucide React, Recharts v3.9.
@@ -199,31 +211,16 @@ Whether you visited to review my technical skillset 🛠️, explore the codebas
 
 ---
 
-## 💖 Thank You for Exploring Java DSA Tracker!
-
-> *"Mastering algorithms one concept at a time—thank you for your support!"* ⚡
-
-Thank you for taking the time to review the Java DSA Tracker! Building an adaptive revision engine that pairs spaced repetition with Google Gemini AI mentorship was engineered to make rigorous technical interview preparation consistent and structured. Your review and attention mean the world to me.
-
-- 🌟 **Grinding DSA or prepping for interviews?** Star this repository to support open-source coding interview tools!
-- 📬 **Let's Connect:** I'm always eager to discuss algorithmic problem solving, Java optimization, and interview strategies. Find me on [GitHub](https://github.com/SriniwasAwasthi).
-
-*Wishing you clean syntax, $O(1)$ complexity, and tremendous success in your technical interviews!* ✨
-
 ---
 
+## 💖 Thank You for Visiting & Exploring 🚀 Java DSA Journey Tracker!
+
+> *"Thank you for taking the time to explore this project! Continuous learning, clean craftsmanship, and solving real-world challenges through elegant software are at the core of my developer journey."* 🚀
+
+* 🌟 **Enjoyed this project?** If you found this repository interesting or helpful, please consider giving it a **Star**!
+* 📬 **Let's Connect & Collaborate:** I am actively seeking engineering opportunities, impactful internships, and open-source collaborations. Feel free to connect via [GitHub](https://github.com/SriniwasAwasthi) or [Email](mailto:sriawasthi164@gmail.com).
+
+---
 <div align="center">
-  <sub>Engineered for algorithmic mastery and interview success by <a href="https://github.com/SriniwasAwasthi">Sriniwas Awasthi</a>.</sub>
+  <sub>Designed & Crafted with Passion by <a href="https://github.com/SriniwasAwasthi"><strong>Sriniwas Awasthi</strong></a> • Continuous Learner & Software Engineer</sub>
 </div>
-
-## 🏛️ System Architecture
-
-```mermaid
-graph TD
-    User["👤 Student / Candidate"] --> UI["💻 React UI & Monaco Code Editor"]
-    UI --> API["⚡ Next.js API Router"]
-    API --> Gemini["🧠 Google Gemini 3.7 AI Mentorship"]
-    API --> SM2["📐 SuperMemo-2 Spaced Repetition Scheduler"]
-    SM2 --> DB[("🗄️ PostgreSQL / SQLite Store")]
-    Gemini -->|Real-Time Code Analysis| UI
-```
