@@ -215,3 +215,15 @@ Thank you for taking the time to review the Java DSA Tracker! Building an adapti
 <div align="center">
   <sub>Engineered for algorithmic mastery and interview success by <a href="https://github.com/SriniwasAwasthi">Sriniwas Awasthi</a>.</sub>
 </div>
+
+## 🏛️ System Architecture
+
+```mermaid
+graph TD
+    User["👤 Student / Candidate"] --> UI["💻 React UI & Monaco Code Editor"]
+    UI --> API["⚡ Next.js API Router"]
+    API --> Gemini["🧠 Google Gemini 3.7 AI Mentorship"]
+    API --> SM2["📐 SuperMemo-2 Spaced Repetition Scheduler"]
+    SM2 --> DB[("🗄️ PostgreSQL / SQLite Store")]
+    Gemini -->|Real-Time Code Analysis| UI
+```
