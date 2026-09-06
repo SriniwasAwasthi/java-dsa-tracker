@@ -144,9 +144,7 @@ npm install
 ```bash
 npm run dev
 ```
-Open your browser at 👉 `http://localhost:3000/`
-
----
+Open your browser to the local development server address---
 
 ## 🏛️ System Architecture
 
