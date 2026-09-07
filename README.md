@@ -4,7 +4,7 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19.0-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
 [![Google Gemini](https://img.shields.io/badge/Google_Gemini-3.7_AI-8E75B2?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
@@ -17,10 +17,13 @@
 ## 📸 Application Screenshots
 
 ### 🌙 Dashboard — Dark Theme
-![Dashboard Dark](./images/Dashboard%20Dark.png)
+![Dashboard Dark](Images/Dashboard%20Dark.png)
 
 ### ☀️ Dashboard — Light Theme
-![Dashboard Light](./images/Dashboard%20Light.png)
+![Dashboard Light](Images/Dashboard%20Light.png)
+
+### 🔑 Google Gemini API Key Configuration
+![Gemini API Key Configuration](Images/Gemini%20Api-Key.png)
 
 ---
 
@@ -56,7 +59,7 @@ graph TD
 
 ```text
 Java-DSA-tracker/
-├── images/                    # UI Screenshots
+├── Images/                    # UI Screenshots & API Setup Guide
 │   ├── Dashboard Dark.png
 │   ├── Dashboard Light.png
 │   └── Gemini Api-Key.png
@@ -76,6 +79,7 @@ Java-DSA-tracker/
 ### Prerequisites
 - **Node.js**: `v18.0.0` or higher
 - **NPM**: `v9.0.0` or higher
+- **Google Gemini API Key**: [Get API Key](https://aistudio.google.com/)
 
 ```bash
 # 1. Clone the repository
@@ -89,8 +93,6 @@ npm install
 npm run dev
 ```
 
-Open your browser to the local development server address to start exploring the platform.
-
 ---
 
 ## 📜 License
@@ -101,7 +103,7 @@ Distributed under the **MIT License**. See `LICENSE` for more information.
 
 ## 💖 Thank You for Visiting & Exploring Java DSA Journey Tracker!
 
-> *"Thank you for taking the time to review this project and explore my software journey! Clean code craftsmanship, algorithmic rigor, and continuous learning are at the core of everything I build."* 🚀
+> *\"Thank you for taking the time to review this project and explore my software journey! Clean code craftsmanship, algorithmic rigor, and continuous learning are at the core of everything I build.\"* 🚀
 
 Whether you are a recruiter evaluating my technical skillset, a fellow developer exploring the code, or a student preparing for coding interviews, I am sincerely grateful for your visit.
 
