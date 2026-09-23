@@ -96,37 +96,37 @@ Explore the primary modules and visual interfaces of Java DSA Journey Tracker:
 
 ```mermaid
 flowchart TD
-    subgraph Client Layer (React 19 & Capacitor)
-        A[👤 User / Student] --> B[💻 React 19 Single Page App]
-        B --> C[🎨 Tailwind CSS v4 & Motion UI]
-        B --> D[📝 Monaco Code Editor & Sandbox]
-        B --> E[📊 Recharts Analytics Dashboard]
+    subgraph Client_Layer ["Client Layer (React 19 & Capacitor)"]
+        A["👤 User / Student"] --> B["💻 React 19 Single Page App"]
+        B --> C["🎨 Tailwind CSS v4 & Motion UI"]
+        B --> D["📝 Monaco Code Editor & Sandbox"]
+        B --> E["📊 Recharts Analytics Dashboard"]
     end
 
-    subgraph Application State & Logic Engine
-        B --> F[🗺️ 90-Day Roadmap Controller]
-        B --> G[⏳ SuperMemo SM-2 Spaced Repetition Engine]
-        B --> H[💾 LocalStorage & Native Sync Service]
-        G -->|Computes Optimal Interval| H
+    subgraph App_State ["Application State & Logic Engine"]
+        B --> F["🗺️ 90-Day Roadmap Controller"]
+        B --> G["⏳ SuperMemo SM-2 Spaced Repetition Engine"]
+        B --> H["💾 LocalStorage & Native Sync Service"]
+        G -->|"Computes Optimal Interval"| H
     end
 
-    subgraph Backend Orchestration Layer (Node.js & Express)
-        B -->|REST API / IPC| I[⚡ Express Server - server.ts]
-        I --> J[🛡️ API Key Sanitizer & Rate Limiter]
-        I --> K[🧠 Model Orchestrator & Fallback Handler]
+    subgraph Backend_Layer ["Backend Orchestration Layer (Node.js & Express)"]
+        B -->|"REST API / IPC"| I["⚡ Express Server (server.ts)"]
+        I --> J["🛡️ API Key Sanitizer & Rate Limiter"]
+        I --> K["🧠 Model Orchestrator & Fallback Handler"]
     end
 
-    subgraph Google Gemini AI Intelligence
-        K -->|Primary: Gemini 3.7 / 2.5 Flash| L[🚀 Google Gemini Generative AI SDK]
-        K -->|Fallback Knowledge Engine| M[📚 Built-in Computer Science Knowledge Base]
-        L --> N[✨ Structured AI Code Mentorship]
+    subgraph AI_Layer ["Google Gemini AI Intelligence"]
+        K -->|"Primary: Gemini 3.7 / 2.5 Flash"| L["🚀 Google Gemini Generative AI SDK"]
+        K -->|"Fallback Knowledge Engine"| M["📚 Built-in Computer Science Knowledge Base"]
+        L --> N["✨ Structured AI Code Mentorship"]
         M --> N
-        N -->|Streaming / JSON Response| B
+        N -->|"Streaming / JSON Response"| B
     end
 
-    subgraph Cross-Platform Packaging
-        B --> O[📱 Capacitor Android Bridge]
-        O --> P[🤖 Native Android APK / WebView]
+    subgraph Mobile_Layer ["Cross-Platform Packaging"]
+        B --> O["📱 Capacitor Android Bridge"]
+        O --> P["🤖 Native Android APK / WebView"]
     end
 ```
 
