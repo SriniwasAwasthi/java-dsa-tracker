@@ -93,17 +93,24 @@ export default function Dashboard({
 
   // Load active timer from localStorage on mount (survives browser refresh!)
   React.useEffect(() => {
-    const active = localStorage.getItem('java_dsa_active_timer_v2');
-    if (active) {
-      const parsed = JSON.parse(active);
-      const elapsedSeconds = Math.floor((Date.now() - parsed.startTime) / 1000);
-      setTimerFocus({
-        type: parsed.focusType,
-        id: parsed.focusId,
-        name: parsed.focusName
-      });
-      setTimerSeconds(elapsedSeconds > 0 ? elapsedSeconds : 0);
-      setTimerRunning(true);
+    try {
+      const active = localStorage.getItem('java_dsa_active_timer_v2');
+      if (active) {
+        const parsed = JSON.parse(active);
+        if (parsed && typeof parsed.startTime === 'number') {
+          const elapsedSeconds = Math.floor((Date.now() - parsed.startTime) / 1000);
+          setTimerFocus({
+            type: parsed.focusType || 'general',
+            id: parsed.focusId || '',
+            name: parsed.focusName || 'General Study Session'
+          });
+          setTimerSeconds(elapsedSeconds > 0 ? elapsedSeconds : 0);
+          setTimerRunning(true);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to parse timer state:', e);
+      localStorage.removeItem('java_dsa_active_timer_v2');
     }
   }, []);
 
@@ -361,8 +368,8 @@ export default function Dashboard({
               <AlertCircle className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-white">Unfinished Milestones Detected</h4>
-              <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
+              <h4 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-neutral-900'}`}>Unfinished Milestones Detected</h4>
+              <p className={`text-xs mt-1 leading-relaxed ${isDark ? 'text-neutral-400' : 'text-neutral-600'}`}>
                 {hasCarryForward 
                   ? "Unfinished topics from previous days have been carried forward to ensure no gaps remain in your learning."
                   : "You have skipped days or left some topics incomplete in past days. Click below to dynamically reschedule and balance your remaining duration."}
@@ -642,7 +649,7 @@ export default function Dashboard({
                             value={problem.status}
                             onChange={(e) => onToggleProblemStatus(problem.id, e.target.value as Problem['status'])}
                             className={`text-xs font-mono rounded-lg p-1.5 focus:outline-none focus:border-orange-500 border ${
-                              isDark ? 'bg-neutral-950 border-neutral-800 text-neutral-300' : 'bg-black border-black text-[#ffffff]'
+                              isDark ? 'bg-neutral-950 border-neutral-800 text-neutral-300' : 'bg-white border-neutral-300 text-neutral-800'
                             }`}
                           >
                             <option value="Unsolved">Unsolved</option>

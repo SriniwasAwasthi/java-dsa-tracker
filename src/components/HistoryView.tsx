@@ -66,8 +66,12 @@ export default function HistoryView({
   // We can let the user edit and save notes. We can save them in localStorage as 'java_dsa_day_notes', where key is dayNumber.
   // That is super clean and avoids modifying the core props, since we can initialize it directly and save to localStorage!
   const [dayNotes, setDayNotes] = useState<{ [dayNumber: number]: string }>(() => {
-    const saved = localStorage.getItem('java_dsa_history_day_notes');
-    return saved ? JSON.parse(saved) : {};
+    try {
+      const saved = localStorage.getItem('java_dsa_history_day_notes');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
   });
 
   const [editingDayNum, setEditingDayNum] = useState<number | null>(null);

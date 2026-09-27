@@ -66,13 +66,42 @@ export default class ErrorBoundary extends Component<Props, State> {
     URL.revokeObjectURL(url);
   };
 
-  private handleReload = () => {
+  private handleReload = async () => {
+    try {
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        for (const reg of regs) {
+          await reg.unregister();
+        }
+      }
+    } catch (e) {
+      console.warn('Error clearing caches during reload:', e);
+    }
     window.location.reload();
   };
 
-  private handleResetEverything = () => {
+  private handleResetEverything = async () => {
     if (confirm('Are you absolutely sure you want to clear your local database and restore initial default values? All progress will be deleted.')) {
+      try {
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((k) => caches.delete(k)));
+        }
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          for (const reg of regs) {
+            await reg.unregister();
+          }
+        }
+      } catch (e) {
+        console.warn('Error clearing caches during reset:', e);
+      }
       localStorage.clear();
+      sessionStorage.clear();
       window.location.reload();
     }
   };

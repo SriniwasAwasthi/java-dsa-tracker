@@ -140,6 +140,7 @@ export default function SettingsView({
     if (e) e.preventDefault();
     const trimmedKey = geminiApiKeyInput.trim();
     if (!trimmedKey) {
+      removeStoredGeminiApiKey();
       showError('Please enter a valid Gemini API key.');
       setGeminiKeyStatus('Connection Failed');
       setGeminiStatusMsg('The Gemini API key cannot be empty. Please check your API key and try again.');
@@ -148,25 +149,36 @@ export default function SettingsView({
 
     setIsValidatingKey(true);
     setGeminiKeyStatus('Connecting...');
-    setGeminiStatusMsg('Verifying Gemini API key connection...');
+    setGeminiStatusMsg('Verifying Gemini API key with Google AI...');
 
     try {
-      await fetch(getApiUrl('/api/ai/validate-key'), {
+      const response = await fetch(getApiUrl('/api/ai/validate-key'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ apiKey: trimmedKey })
-      }).catch(err => console.warn('Validate key background check:', err));
+      });
 
-      setStoredGeminiApiKey(trimmedKey);
-      setGeminiKeyStatus('Connected');
-      setGeminiStatusMsg('Your Gemini API key is connected. AI Mentor is ready to use.');
-      showSuccess('Gemini API key connected successfully!');
+      const data = await response.json().catch(() => ({}));
+
+      if (response.ok && data.valid) {
+        setStoredGeminiApiKey(trimmedKey);
+        setGeminiKeyStatus('Connected');
+        setGeminiStatusMsg(data.message || 'Your Gemini API key is verified and connected. AI Mentor is ready to use.');
+        showSuccess('Gemini API key verified & connected successfully!');
+      } else {
+        removeStoredGeminiApiKey();
+        setGeminiKeyStatus('Connection Failed');
+        const failMsg = data.error || data.message || 'Invalid Gemini API key. Authentication failed. Please check your key.';
+        setGeminiStatusMsg(failMsg);
+        showError(failMsg);
+      }
     } catch (err: any) {
-      console.error(err);
-      setStoredGeminiApiKey(trimmedKey);
-      setGeminiKeyStatus('Connected');
-      setGeminiStatusMsg('Your Gemini API key is connected. AI Mentor is ready to use.');
-      showSuccess('Gemini API key connected successfully!');
+      console.error('[API Key Validation Error]:', err);
+      removeStoredGeminiApiKey();
+      setGeminiKeyStatus('Connection Failed');
+      const failMsg = 'Could not verify Gemini API key. Network error or backend unreachable.';
+      setGeminiStatusMsg(failMsg);
+      showError(failMsg);
     } finally {
       setIsValidatingKey(false);
     }
@@ -549,7 +561,21 @@ export default function SettingsView({
                         type={showGeminiKey ? 'text' : 'password'}
                         placeholder="Enter your Gemini API key"
                         value={geminiApiKeyInput}
-                        onChange={(e) => setGeminiApiKeyInput(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setGeminiApiKeyInput(val);
+                          const stored = getStoredGeminiApiKey();
+                          if (stored && val.trim() === stored) {
+                            setGeminiKeyStatus('Connected');
+                            setGeminiStatusMsg('Your Gemini API key is connected. AI Mentor is ready to use.');
+                          } else if (!val.trim()) {
+                            setGeminiKeyStatus('Not Connected');
+                            setGeminiStatusMsg('Add your Gemini API key to connect and use the AI Mentor.');
+                          } else {
+                            setGeminiKeyStatus('Not Connected');
+                            setGeminiStatusMsg('Unsaved key changes. Click Connect / Save API Key to verify.');
+                          }
+                        }}
                         onKeyDown={(e) => e.key === 'Enter' && handleSaveGeminiApiKey()}
                         className={`w-full text-xs font-mono rounded-xl pl-3.5 pr-10 py-2.5 focus:outline-none focus:border-orange-500 border ${
                           isDark ? 'bg-neutral-950 border-neutral-800 text-white placeholder-neutral-500' : 'bg-neutral-50 border-neutral-200 text-neutral-900 placeholder-neutral-400'
@@ -574,12 +600,12 @@ export default function SettingsView({
                       {isValidatingKey ? (
                         <>
                           <RefreshCw className="w-4 h-4 animate-spin" />
-                          <span>Connecting...</span>
+                          <span>Verifying...</span>
                         </>
                       ) : (
                         <>
                           <Sparkles className="w-4 h-4" />
-                          <span>{geminiKeyStatus === 'Connected' ? 'Update API Key' : 'Save API Key'}</span>
+                          <span>{geminiKeyStatus === 'Connected' ? 'Update Key' : geminiKeyStatus === 'Connection Failed' ? 'Retry Connection' : 'Connect Key'}</span>
                         </>
                       )}
                     </button>

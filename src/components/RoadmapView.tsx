@@ -210,22 +210,20 @@ export default function RoadmapView({
                                   : 'bg-neutral-900 text-neutral-400 border-neutral-800'
                                 : isCurrent
                                 ? 'bg-orange-500 text-neutral-950 border-orange-500 font-bold ring-2 ring-orange-500/25'
-                                : `bg-black text-white font-bold ${
-                                    day.status === 'Completed'
-                                      ? 'border-emerald-500'
-                                      : day.status === 'Skipped'
-                                      ? 'border-rose-500'
-                                      : day.status === 'Partial'
-                                      ? 'border-amber-500'
-                                      : 'border-black'
-                                  }`
+                                : day.status === 'Completed'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-300 font-bold'
+                                : day.status === 'Skipped'
+                                ? 'bg-rose-50 text-rose-700 border-rose-300 font-bold'
+                                : day.status === 'Partial'
+                                ? 'bg-amber-50 text-amber-700 border-amber-300 font-bold'
+                                : 'bg-neutral-100 text-neutral-700 border-neutral-200'
                             }`}
                           >
                             <span className="text-[10px] uppercase leading-none">Day</span>
                             <span className="text-md font-bold mt-0.5">{day.dayNumber}</span>
                           </button>
                           <div>
-                            <p className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-neutral-600'}`}>
+                            <p className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-neutral-900'}`}>
                               {new Date(day.date).toLocaleDateString('en-US', {
                                 month: 'short',
                                 day: 'numeric',
@@ -253,7 +251,7 @@ export default function RoadmapView({
                                     className={`text-[11px] font-medium font-sans px-2 py-0.5 rounded border cursor-help ${
                                       isDark 
                                         ? 'bg-neutral-900 text-neutral-300 border-neutral-800/80' 
-                                        : 'bg-black text-[#ffffff] border-black shadow-sm'
+                                        : 'bg-neutral-100 text-neutral-800 border-neutral-200 shadow-sm'
                                     }`}
                                   >
                                     {topic?.name}
@@ -279,7 +277,11 @@ export default function RoadmapView({
                                           : problem?.status === 'Revision'
                                           ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
                                           : 'bg-neutral-900 text-neutral-400 border border-neutral-800/80'
-                                        : `bg-black text-[#ffffff] ${problem?.status === 'Solved' ? 'border-emerald-500' : problem?.status === 'Revision' ? 'border-orange-500' : 'border-black'}`
+                                        : problem?.status === 'Solved'
+                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-300'
+                                        : problem?.status === 'Revision'
+                                        ? 'bg-orange-50 text-orange-700 border border-orange-300'
+                                        : 'bg-neutral-100 text-neutral-700 border-neutral-200'
                                     }`}
                                   >
                                     {problem?.title}
@@ -296,7 +298,7 @@ export default function RoadmapView({
                             value={day.status}
                             onChange={(e) => onUpdateDayStatus(day.dayNumber, e.target.value as RoadmapDay['status'])}
                             className={`text-xs font-mono rounded-lg p-2 focus:outline-none focus:border-orange-500 border ${
-                              isDark ? 'bg-neutral-900 border-neutral-800 text-neutral-300' : 'bg-black border-black text-[#ffffff]'
+                              isDark ? 'bg-neutral-900 border-neutral-800 text-neutral-300' : 'bg-white border-neutral-300 text-neutral-800'
                             }`}
                           >
                             <option value="Pending">Pending</option>

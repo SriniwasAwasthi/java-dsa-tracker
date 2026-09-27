@@ -524,7 +524,7 @@ export default function CalendarView({
                             value={prob.status}
                             onChange={(e) => onToggleProblemStatus(prob.id, e.target.value as Problem['status'])}
                             className={`text-[10px] font-mono border rounded p-1 focus:outline-none ${
-                              isDark ? 'bg-neutral-900 border-neutral-800 text-neutral-300' : 'bg-black border-black text-[#ffffff]'
+                              isDark ? 'bg-neutral-900 border-neutral-800 text-neutral-300' : 'bg-white border-neutral-300 text-neutral-800'
                             }`}
                           >
                             <option value="Unsolved">Unsolved</option>

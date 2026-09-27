@@ -57,34 +57,63 @@ function getAIClientForRequest(req: express.Request): GoogleGenAI | null {
   return null;
 }
 
-// Robust helper function to generate AI content with automatic model fallback
+// Response caching layer for instant repeat queries and low latency
+const aiResponseCache = new Map<string, { text: string; expiry: number }>();
+
+function getCachedResponse(key: string): string | null {
+  const item = aiResponseCache.get(key);
+  if (!item) return null;
+  if (Date.now() > item.expiry) {
+    aiResponseCache.delete(key);
+    return null;
+  }
+  return item.text;
+}
+
+function setCachedResponse(key: string, text: string, ttlMs: number = 1000 * 60 * 60 * 2) {
+  if (text && text.trim().length > 0) {
+    aiResponseCache.set(key, { text, expiry: Date.now() + ttlMs });
+  }
+}
+
+// Robust helper function to generate AI content with automatic model fallback & strict timeout
 async function generateWithFallback(
   ai: GoogleGenAI,
   options: {
     contents: any;
     systemInstruction?: string;
     temperature?: number;
+    maxOutputTokens?: number;
   }
 ): Promise<string> {
+  // Ultra-fast flash models with direct active quotas
   const modelsToTry = [
-    'gemini-2.5-flash',
-    'gemini-3.6-flash',
-    'gemini-3.5-flash',
-    'gemini-flash-latest',
-    'gemini-flash-lite-latest',
-    'gemini-2.0-flash'
+    'gemini-3.1-flash-lite',
+    'gemini-flash-latest'
   ];
   let lastError: any = null;
 
   for (const model of modelsToTry) {
     try {
-      const response = await ai.models.generateContent({
+      let timeoutHandle: NodeJS.Timeout | undefined;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutHandle = setTimeout(() => {
+          reject(new Error(`Model ${model} timed out after 7500ms`));
+        }, 7500);
+      });
+
+      const callPromise = ai.models.generateContent({
         model,
         contents: options.contents,
         config: {
           systemInstruction: options.systemInstruction,
-          temperature: options.temperature ?? 0.7,
+          temperature: options.temperature ?? 0.3,
+          maxOutputTokens: options.maxOutputTokens ?? 1200,
         },
+      });
+
+      const response = await Promise.race([callPromise, timeoutPromise]).finally(() => {
+        if (timeoutHandle) clearTimeout(timeoutHandle);
       });
 
       if (response && response.text && response.text.trim().length > 0) {
@@ -105,7 +134,7 @@ function generateDynamicChatResponse(message: string, context?: any): string {
   const query = (message || '').trim();
   const lower = query.toLowerCase();
 
-  // 1. JAVA OVERVIEW
+  // 1. JAVA OVERVIEW & BASICS
   if (lower.includes('what is java') || lower === 'java' || lower.startsWith('java ')) {
     return `### Java Programming Language & Platform
 
@@ -116,7 +145,7 @@ Here is a comprehensive breakdown for **"${query}"**:
 - **Primary Goal**: Built around the philosophy of *"Write Once, Run Anywhere"* (WORA), allowing Java code to compile into bytecode that runs on any operating system equipped with a **Java Virtual Machine (JVM)**.
 
 #### 2. Key Features & Internal Architecture
-- **Object-Oriented**: Everything in Java (except primitive types) revolves around Objects and Classes, enforcing modularity, encapsulation, inheritance, and polymorphism.
+- **Object-Oriented**: Everything in Java revolves around Objects and Classes, enforcing modularity, encapsulation, inheritance, and polymorphism.
 - **JVM & Memory Management**: Java automatically handles memory allocation and deallocation via an automated **Garbage Collector (GC)**, preventing memory leaks and dangling pointers.
 - **Platform Independence**: Source code (\`.java\`) $\rightarrow$ Java Compiler (\`javac\`) $\rightarrow$ Bytecode (\`.class\`) $\rightarrow$ Executed by JVM on Windows/Linux/macOS.
 
@@ -130,32 +159,80 @@ public class JavaOverview {
         int age = 22; // Primitive (stored on Stack)
         String language = "Java"; // Reference (Object stored on Heap)
         
-        System.out.println("Language: " + language + " | Version: 21+");
+        System.out.println("Language: " + language + " | Platform: JVM");
     }
 }
 \`\`\`
 
 #### 4. Memory Layout Summary
-- **Stack Memory**: Stores local primitive variables and method execution call frames.
-- **Heap Memory**: Stores all instantiated objects, instance variables, and class metadata.`;
+- **Stack Memory**: Stores local primitive variables and method execution call frames ($O(1)$ fast access).
+- **Heap Memory**: Stores all instantiated objects, instance variables, and class metadata managed by the Garbage Collector.`;
   }
 
-  // 2. ARRAY / ARRAYS
+  // 2. PYTHON / PYTHON VS JAVA
+  if (lower.includes('python') || lower.includes('what about python') || lower.includes('what is python')) {
+    return `### Python vs Java & Language Overview
+
+Here is a comprehensive breakdown for **"${query}"**:
+
+#### 1. Core Definition & Philosophy
+- **Python** is a high-level, interpreted, dynamically-typed programming language created by Guido van Rossum. It prioritizes readable, concise syntax and rapid prototyping.
+- **Java** is a compiled-to-bytecode, statically-typed, object-oriented language optimized for enterprise scalability, high-performance backends, and strict type safety.
+
+#### 2. Key Architectural Differences
+| Dimension / Feature | Java | Python |
+| :--- | :--- | :--- |
+| **Typing System** | **Statically Typed** (type checking at compile time) | **Dynamically Typed** (type checking at runtime) |
+| **Execution Model** | Compiled to Bytecode $\rightarrow$ JIT compiled on JVM | Interpreted line-by-line (CPython / PyPy) |
+| **Performance** | High Execution Speed & JIT optimization | Slower raw execution; excels in ML/AI via C-extensions |
+| **Memory Model** | Strict Heap & Stack separation with JVM GC | Reference counting + Cyclic Garbage Collector |
+| **Syntax Style** | Explicit, verbose, curly braces \`{ }\` | Concise, clean, indentation-based |
+
+#### 3. Side-by-Side Code Comparison
+\`\`\`java
+// Java: Explicit Types & Structure
+public class Example {
+    public static void main(String[] args) {
+        int sum = 0;
+        for (int i = 1; i <= 5; i++) {
+            sum += i;
+        }
+        System.out.println("Java Sum: " + sum);
+    }
+}
+\`\`\`
+
+\`\`\`python
+# Python: Concise & Dynamic
+def calculate_sum():
+    total = sum(range(1, 6))
+    print(f"Python Sum: {total}")
+
+calculate_sum()
+\`\`\`
+
+#### 4. When to Use Which
+- Choose **Java** for large-scale enterprise microservices (Spring Boot), Android development, and mastering strict Data Structures & Algorithms.
+- Choose **Python** for Data Science, Machine Learning / AI pipelines, automation scripts, and rapid API prototyping.`;
+  }
+
+  // 3. ARRAY / ARRAYS
   if (lower.includes('what is array') || lower.includes('what is an array') || lower === 'array' || lower.startsWith('array ')) {
     return `### Arrays in Java & Data Structures
 
 Here is a detailed breakdown for **"${query}"**:
 
 #### 1. Definition & Core Idea
-- An **Array** is a linear data structure consisting of a collection of elements, each identified by an array index.
-- **Contiguous Memory**: Elements are stored sequentially in adjacent memory locations.
-- **Fixed Sizing**: Array size is fixed upon instantiation and cannot shrink or expand dynamically.
+- An **Array** is a linear data structure consisting of a contiguous collection of elements, each accessible by a numerical index.
+- **Contiguous Memory**: Elements are placed sequentially in adjacent memory addresses.
+- **Fixed Sizing**: Array size is allocated at creation and cannot resize dynamically in memory.
 
 #### 2. Operations & Time Complexity Analysis
 | Operation | Time Complexity | Notes |
 | :--- | :--- | :--- |
 | **Random Access (by Index)** | **$O(1)$** | Direct memory offset calculation: \`base + index * element_size\` |
-| **Search (Unsorted)** | $O(N)$ | Must iterate sequentially element by element |
+| **Search (Unsorted)** | $O(N)$ | Must iterate sequentially through elements |
+| **Search (Sorted)** | **$O(\\log N)$** | Binary Search on sorted arrays |
 | **Insertion / Deletion** | $O(N)$ | Requires shifting remaining elements to maintain continuity |
 
 #### 3. Runnable Java Code Example
@@ -177,24 +254,24 @@ public class ArrayDemo {
 }
 \`\`\`
 
-#### 4. Exam & Interview Tips
-- **Index Out of Bounds**: Always guard against \`ArrayIndexOutOfBoundsException\` by checking \`0 <= index < array.length\`.
-- **Dynamic Alternative**: Use \`ArrayList\` when element count is variable or unknown at runtime.`;
+#### 4. Interview Tips
+- Guard against \`ArrayIndexOutOfBoundsException\` by validating indices (\`0 <= index < array.length\`).
+- Use \`ArrayList\` when element count varies dynamically at runtime.`;
   }
 
-  // 3. ARRAYLIST VS LINKEDLIST SUMMARY & COMPARISON
-  if (lower.includes('arraylist') || lower.includes('vs') || lower.includes('exam') || lower.includes('summarize')) {
+  // 4. ARRAYLIST VS LINKEDLIST
+  if (lower.includes('arraylist') || lower.includes('linkedlist') || (lower.includes('list') && lower.includes('vs'))) {
     return `### Exam & Interview Guide: ArrayList vs LinkedList
 
 Here is the high-yield summary for **"${query}"**:
 
 #### 1. Core Structural Differences
-- **ArrayList**: Backed by a dynamically resizing contiguous array in memory.
+- **ArrayList**: Backed by a dynamically resizing contiguous array.
   - **Random Access ($O(1)$)**: Instant element retrieval by index (\`list.get(idx)\`).
-  - **Insertion / Deletion ($O(N)$)**: Elements must shift left/right when inserting in the middle.
+  - **Insertion / Deletion in Middle ($O(N)$)**: Shifting elements is required.
 - **LinkedList**: Backed by a doubly-linked list of node objects (\`prev <-> node <-> next\`).
-  - **Random Access ($O(N)$)**: Sequential traversal required from head or tail node.
-  - **Insertion / Deletion ($O(1)$)**: Instant pointer updates at head or tail.
+  - **Random Access ($O(N)$)**: Must traverse from head or tail node sequentially.
+  - **Insertion / Deletion at Endpoints ($O(1)$)**: Instant pointer re-linking.
 
 #### 2. Performance & Memory Comparison
 | Operation / Metric | ArrayList | LinkedList |
@@ -202,7 +279,8 @@ Here is the high-yield summary for **"${query}"**:
 | **Get by Index** | **$O(1)$** (Instant) | $O(N)$ (Sequential) |
 | **Add / Remove at End** | $O(1)$ amortized | **$O(1)$** |
 | **Add / Remove at Start** | $O(N)$ (Shifts all) | **$O(1)$** (Head pointer) |
-| **Memory Overhead** | Low (contiguous array) | High (Node pointers + object header) |
+| **Memory Overhead** | Low (contiguous array) | High (Node pointers + object headers) |
+| **CPU Cache Friendliness** | **Excellent** (Spatial Locality) | Poor (Scattered Heap references) |
 
 #### 3. Java Code Walkthrough
 \`\`\`java
@@ -210,84 +288,105 @@ import java.util.*;
 
 public class ListComparisonDemo {
     public static void main(String[] args) {
-        // Use ArrayList for fast index lookups
+        // Use ArrayList for fast index lookups and general collections
         List<String> arrayList = new ArrayList<>();
         arrayList.add("Java");
-        arrayList.add("Data Structures");
+        arrayList.add("Algorithms");
         System.out.println("ArrayList Get(0): " + arrayList.get(0));
 
         // Use LinkedList for Queues & Deques
-        Deque<String> linkedList = new LinkedList<>();
-        linkedList.addFirst("Head Node");
-        linkedList.addLast("Tail Node");
-        System.out.println("LinkedList PollFirst: " + linkedList.pollFirst());
-    }
-}
-\`\`\`
-
-#### 4. Exam Cheat Sheet
-- Choose **ArrayList** by default for general lists and random access.
-- Choose **LinkedList** when building Queues, Stacks, or adding/removing heavily at endpoints.`;
-  }
-
-  // 4. LINKED LIST / LL
-  if (lower.includes('what is ll') || lower.includes('what is linked list') || lower.includes('linkedlist') || lower.includes('linked list') || lower === 'll') {
-    return `### Linked List (LL) Data Structure
-
-Here is the complete breakdown for **"${query}"**:
-
-#### 1. Definition & Core Idea
-- A **Linked List** is a linear data structure where elements (called **Nodes**) are connected by reference pointers rather than being stored in contiguous memory.
-- Each **Node** consists of two fields:
-  1. **Data**: Holds the stored value.
-  2. **Next Pointer**: Reference pointer to the next node in sequence.
-
-#### 2. Singly vs Doubly Linked List
-- **Singly Linked List**: Each node points only to the \`next\` node.
-- **Doubly Linked List**: Each node contains references to both \`next\` and \`prev\` nodes (used in Java's \`java.util.LinkedList\`).
-
-#### 3. Complexity Comparison vs Array
-- **Random Access**: $O(N)$ (must traverse from head node).
-- **Insertion / Deletion at Head/Tail**: **$O(1)$** (instant pointer re-linking without shifting).
-
-#### 4. Runnable Java Code Implementation
-\`\`\`java
-class Node {
-    int data;
-    Node next;
-
-    Node(int data) {
-        this.data = data;
-        this.next = null;
-    }
-}
-
-public class LinkedListDemo {
-    public static void main(String[] args) {
-        Node head = new Node(10);
-        head.next = new Node(20);
-        head.next.next = new Node(30);
-
-        // Traverse the Linked List
-        Node temp = head;
-        while (temp != null) {
-            System.out.print(temp.data + " -> ");
-            temp = temp.next;
-        }
-        System.out.println("null");
+        Deque<String> deque = new LinkedList<>();
+        deque.addFirst("Head Item");
+        deque.addLast("Tail Item");
+        System.out.println("Deque PollFirst: " + deque.pollFirst());
     }
 }
 \`\`\``;
   }
 
-  // 5. STACK / QUEUE / TREES / GRAPHS / GENERAL FALLBACK
+  // 5. STACK & QUEUE
+  if (lower.includes('stack') || lower.includes('queue')) {
+    return `### Stack and Queue Data Structures in Java
+
+Here is a comprehensive breakdown for **"${query}"**:
+
+#### 1. Fundamental Principles
+- **Stack (LIFO - Last In, First Out)**: Elements are added and removed from the same end (the "top").
+  - Core Operations: \`push()\`, \`pop()\`, \`peek()\` — all **$O(1)$**.
+  - Best Java Class: \`ArrayDeque<T>\` (recommended over legacy \`java.util.Stack\`).
+- **Queue (FIFO - First In, First Out)**: Elements are added at the rear and removed from the front.
+  - Core Operations: \`offer()\`, \`poll()\`, \`peek()\` — all **$O(1)$**.
+  - Best Java Class: \`ArrayDeque<T>\` or \`LinkedList<T>\`.
+
+#### 2. Java Implementation Example
+\`\`\`java
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Queue;
+
+public class StackQueueDemo {
+    public static void main(String[] args) {
+        // Modern Java Stack using ArrayDeque
+        Deque<Integer> stack = new ArrayDeque<>();
+        stack.push(10);
+        stack.push(20);
+        System.out.println("Stack Pop (LIFO): " + stack.pop()); // 20
+
+        // Queue using ArrayDeque
+        Queue<String> queue = new ArrayDeque<>();
+        queue.offer("First");
+        queue.offer("Second");
+        System.out.println("Queue Poll (FIFO): " + queue.poll()); // First
+    }
+}
+\`\`\`
+
+#### 3. Time Complexity
+- **Push / Offer**: $O(1)$
+- **Pop / Poll**: $O(1)$
+- **Peek**: $O(1)$
+- **Space Complexity**: $O(N)$`;
+  }
+
+  // 6. HASHMAP / HASHSET
+  if (lower.includes('hashmap') || lower.includes('hashset') || lower.includes('hash') || lower.includes('map')) {
+    return `### Hash-Based Collections in Java (HashMap & HashSet)
+
+Here is a breakdown for **"${query}"**:
+
+#### 1. How HashMap Works Internally
+- **Buckets & Hashing**: An array of Node buckets (\`Node<K,V>[]\`). Keys are hashed using \`key.hashCode()\` to locate bucket index (\`hash & (n - 1)\`).
+- **Collision Handling**: Linked lists for collisions. If bucket size $\\ge 8$, converts to a Red-Black Tree ($O(\\log N)$ worst-case).
+- **Time Complexity**: Average **$O(1)$** for \`get()\`, \`put()\`, \`containsKey()\`.
+
+#### 2. Java Code Example
+\`\`\`java
+import java.util.HashMap;
+import java.util.Map;
+
+public class MapDemo {
+    public static void main(String[] args) {
+        Map<String, Integer> frequencyMap = new HashMap<>();
+        String[] words = {"apple", "banana", "apple", "cherry"};
+
+        for (String w : words) {
+            frequencyMap.put(w, frequencyMap.getOrDefault(w, 0) + 1);
+        }
+
+        System.out.println("Word Frequencies: " + frequencyMap);
+    }
+}
+\`\`\``;
+  }
+
+  // 7. GENERAL CS / DSA MENTOR FALLBACK
   return `### Java & Computer Science Mentor Solution
 
 Here is a comprehensive breakdown for **"${query}"**:
 
 #### 1. Core Concept & Technical Explanation
-- **Explanation**: In Java Computer Science, selecting appropriate data structures and algorithms ensures optimal CPU cache utilization and computational efficiency ($O$).
-- **Key Strategy**: Always establish proper base cases, verify boundary conditions ($N=0, N=1$), and inspect space-time complexity.
+- **Analysis**: In Java Data Structures & Algorithms, selecting appropriate data representations ensures optimal computational efficiency ($O$) and CPU cache locality.
+- **Key Strategy**: Verify boundary conditions ($N=0, N=1$), check for \`null\` references, and determine space-time complexity tradeoffs.
 
 #### 2. Runnable Java Code Implementation
 \`\`\`java
@@ -295,42 +394,42 @@ import java.util.*;
 
 public class Solution {
     public static void main(String[] args) {
-        System.out.println("Topic Query Analysis: ${query.replace(/"/g, "'")}");
+        System.out.println("Topic Query: ${query.replace(/"/g, "'")}");
         
-        // Standard Structure Demonstration
-        int[] data = {10, 20, 30, 40, 50};
-        System.out.println("Dataset Size: " + data.length);
+        // Example Java Data Processing
+        List<String> items = Arrays.asList("Java", "Data Structures", "Algorithms");
+        items.forEach(item -> System.out.println("-> " + item));
     }
 }
 \`\`\`
 
 #### 3. Complexity & Memory Overview
-- **Time Complexity**: $O(1)$ to $O(N)$
-- **Space Complexity**: $O(1)$ auxiliary space`;
+- **Time Complexity**: $O(1)$ to $O(N)$ depending on traversal.
+- **Space Complexity**: $O(1)$ auxiliary space.`;
 }
 
 function generateDynamicCompareResponse(concept1: string, concept2: string): string {
-  const c1 = concept1 || 'Stack';
-  const c2 = concept2 || 'Queue';
+  const c1 = concept1 || 'ArrayList';
+  const c2 = concept2 || 'LinkedList';
 
   return `### Technical Comparison: ${c1} vs ${c2}
 
 #### 1. Definitions & Core Purpose
-- **${c1}**: Linear data structure where elements follow specific access rules (e.g. LIFO for Stack, Dynamic Array for ArrayList). Used for index lookups, function call stacks, undo mechanisms, and backtracking.
-- **${c2}**: Linear data structure designed for sequential access (e.g. FIFO for Queue, Linked Nodes for LinkedList). Used for task scheduling, messaging buffers, breadth-first search (BFS), and endpoint operations.
+- **${c1}**: Represents a fundamental Java data structure or algorithmic technique focused on computational efficiency, structured data access, and predictable performance.
+- **${c2}**: An alternative abstraction designed with different tradeoffs in memory layout, insertion/deletion mechanisms, and traversal strategies.
 
 #### 2. Comprehensive Comparison Table
 | Feature / Metric | ${c1} | ${c2} |
 | :--- | :--- | :--- |
-| **Primary Data Structure** | Dynamic Array / Memory Offset | Linked Nodes / Double Pointers |
-| **Random Access ($O(1)$)** | **$O(1)$ Direct Indexing** | $O(N)$ Sequential Traversal |
-| **Insertion / Deletion** | $O(N)$ shifting in middle | **$O(1)$ Instant at Endpoints** |
-| **JVM Memory Layout** | Contiguous Memory Block | Scattered Nodes with Reference Pointers |
-| **Primary Use-Case** | Index lookups & random read access | Order preservation & Queue / Deque |
+| **Primary Underlying Structure** | Contiguous Memory / Index Array | Dynamic Nodes / Pointer Chains |
+| **Random Access ($O(1)$)** | **$O(1)$ Direct Offset** | $O(N)$ Sequential Traversal |
+| **Insertion / Deletion** | $O(N)$ with element shifting | **$O(1)$ with Pointer Updates** |
+| **Memory Layout** | Contiguous memory blocks | Scattered heap allocations |
+| **CPU Cache Performance** | **High** (Spatial Locality) | Lower (Pointer chasing) |
 
 #### 3. When to Choose Which
-- Choose **${c1}** when your workload requires reading data by index or iterating over contiguous memory elements.
-- Choose **${c2}** when building a queue, stack, or performing frequent insertions/deletions at the start or end of the collection.
+- Choose **${c1}** when your workload requires frequent index-based random access and iteration across contiguous items.
+- Choose **${c2}** when you need high-frequency insertions and deletions at endpoints without memory reallocation copies.
 
 #### 4. Runnable Java Code Comparison
 \`\`\`java
@@ -338,43 +437,43 @@ import java.util.*;
 
 public class ComparisonDemo {
     public static void main(String[] args) {
-        System.out.println("Comparing ${c1} vs ${c2}");
+        System.out.println("Comparing: ${c1} vs ${c2}");
 
-        // ${c1} Example
-        List<String> listA = new ArrayList<>();
-        listA.add("${c1} Element");
-        System.out.println("Concept A (${c1}): " + listA);
+        // Demonstrating ${c1}
+        List<String> firstCollection = new ArrayList<>();
+        firstCollection.add("${c1} Entry");
+        System.out.println("Sample ${c1}: " + firstCollection);
 
-        // ${c2} Example
-        Deque<String> listB = new LinkedList<>();
-        listB.add("${c2} Element");
-        System.out.println("Concept B (${c2}): " + listB);
+        // Demonstrating ${c2}
+        Deque<String> secondCollection = new LinkedList<>();
+        secondCollection.add("${c2} Entry");
+        System.out.println("Sample ${c2}: " + secondCollection);
     }
 }
 \`\`\`
 
 #### 5. Tech Lead Interview Tip
-Interviewers frequently ask about **CPU Cache Friendliness**. Structures like contiguous arrays (${c1}) leverage CPU cache lines effectively due to spatial locality, while linked node structures (${c2}) incur higher memory pointer overhead and cache misses across heap memory.`;
+Interviewers frequently ask about **CPU Cache Friendliness**. Contiguous structures (${c1}) leverage hardware cache lines effectively, while pointer-based structures (${c2}) generate additional garbage collection overhead and reference indirection.`;
 }
 
 function generateDynamicNotesResponse(topicName: string): string {
-  const t = topicName || 'Dynamic Programming (DP)';
+  const t = topicName || 'Data Structures & Algorithms';
 
   return `### Personal Study Notes: ${t}
 
 #### 1. Definition & Core Idea
-- **${t}**: A fundamental concept in Java Data Structures & Algorithms used to structure data, optimize execution time, and solve complex computational problems efficiently.
-- **Why it is used**: Provides clean abstractions, optimal time complexity bounds, and robust data organization in software engineering applications.
+- **${t}**: A foundational topic in Computer Science and Java engineering used to organize data and optimize runtime execution for scalable applications.
+- **Why it is used**: Provides clean abstractions, guaranteed Big-O time bounds, and robust software architecture.
 
 #### 2. How to Initialize & Use in Java
-- Declare using Java Standard Collection interfaces or custom class representations.
-- Always check for \`null\` references and boundary sizes before operating on elements.
+- Declare using Java Standard Collection interfaces or custom classes.
+- Always check for \`null\` references and boundary parameters before operations.
 
 #### 3. Time & Space Complexity Quick-Ref Guide
 | Operation | Best Case | Average Case | Worst Case | Space Complexity |
 | :--- | :--- | :--- | :--- | :--- |
-| **Access / Search** | $O(1)$ | $O(\log N) \text{ or } O(1)$ | $O(N)$ | $O(N)$ |
-| **Insertion / Deletion** | $O(1)$ | $O(1) \text{ or } O(\log N)$ | $O(N)$ | $O(1)$ auxiliary |
+| **Access / Search** | $O(1)$ | $O(1) \\text{ or } O(\\log N)$ | $O(N)$ | $O(N)$ |
+| **Insertion / Deletion** | $O(1)$ | $O(1)$ | $O(N)$ | $O(1)$ auxiliary |
 
 #### 4. Complete Runnable Java Code Template
 \`\`\`java
@@ -397,13 +496,13 @@ public class ${t.replace(/[^a-zA-Z0-9]/g, '') || 'Study'}NotesDemo {
 
 #### 5. Exam-Friendly Checklist & Pitfalls
 - **Boundary Handling**: Always test empty inputs ($N=0$) and single element inputs ($N=1$).
-- **Null Safety**: Avoid \`NullPointerException\` by validating node links.
+- **Null Safety**: Avoid \`NullPointerException\` by validating object references.
 - **Memory Footprint**: Prefer contiguous storage when random access speed is critical.`;
 }
 
 function generateDynamicProblemGuideResponse(problemTitle: string, topicName: string, difficulty: string): string {
-  const p = problemTitle || 'Linked List Cycle Detection';
-  const top = topicName || 'Linked Lists';
+  const p = problemTitle || 'Practice Problem';
+  const top = topicName || 'Algorithms';
   const diff = difficulty || 'Medium';
 
   return `### Strategic Practice Guide: ${p}
@@ -413,59 +512,47 @@ function generateDynamicProblemGuideResponse(problemTitle: string, topicName: st
 - **One-Line Definition**: Solve **${p}** by applying pattern recognition and optimal space-time traversal strategies.
 
 #### 1. Pattern Recognition
-- Recognize whether **Two Pointers (Fast & Slow)**, **Sliding Window**, **HashMap Lookup**, or **Recursion Base Cases** applies to ${p}.
+- Identify whether **Two Pointers**, **Sliding Window**, **HashMap Lookup**, **BFS/DFS**, or **Dynamic Programming** applies to **${p}**.
 
 #### 2. Progressive Hints
-- **Hint 1 (First Step)**: Read problem constraints and boundary conditions ($N=0, N=1$) carefully before writing main loops.
-- **Hint 2 (Brute Force $O(N^2)$)**: Consider storing visited elements or node references in a \`HashSet\` ($O(N)$ time, $O(N)$ space).
-- **Hint 3 (Optimal Strategy $O(N)$)**: Use Floyd's Cycle Finding algorithm (Slow pointer moves 1 step, Fast pointer moves 2 steps) to achieve $O(1)$ auxiliary space complexity!
+- **Hint 1 (First Step)**: Check boundary conditions ($N=0, N=1$) and constraints before writing loops.
+- **Hint 2 (Brute Force $O(N^2)$)**: Try a nested traversal to verify correctness and establish a baseline.
+- **Hint 3 (Optimal Strategy $O(N)$)**: Use auxiliary structures like a \`HashMap\` or Two Pointers to achieve linear $O(N)$ time complexity!
 
 #### 3. Approach & Strategy Idea
-1. Initialize \`slow = head\` and \`fast = head\`.
-2. Traverse while \`fast != null && fast.next != null\`.
-3. Advance \`slow\` by 1 node, \`fast\` by 2 nodes.
-4. If \`slow == fast\`, a cycle exists. If \`fast\` reaches \`null\`, no cycle exists.
+1. Initialize appropriate pointers or state tracking data structures.
+2. Traverse the input while checking target conditions.
+3. Return the result or compute the optimal boundary.
 
 #### 4. Runnable Java Code Solution Template
 \`\`\`java
+import java.util.*;
+
 public class Solution {
-    static class ListNode {
-        int val;
-        ListNode next;
-        ListNode(int x) { val = x; next = null; }
-    }
-
-    public static boolean hasCycle(ListNode head) {
-        if (head == null || head.next == null) return false;
-
-        ListNode slow = head;
-        ListNode fast = head;
-
-        while (fast != null && fast.next != null) {
-            slow = slow.next;
-            fast = fast.next.next;
-            if (slow == fast) {
-                return true; // Cycle detected
-            }
-        }
-        return false; // No cycle
-    }
-
     public static void main(String[] args) {
-        ListNode head = new ListNode(3);
-        head.next = new ListNode(2);
-        head.next.next = new ListNode(0);
-        head.next.next.next = head.next; // Cycle back to node 2
-
-        System.out.println("Has Cycle: " + hasCycle(head));
+        System.out.println("Practice Solution for: ${p}");
+        
+        int[] nums = {2, 7, 11, 15};
+        int target = 9;
+        
+        // Fast two-pointer or hash lookup demonstration
+        Map<Integer, Integer> map = new HashMap<>();
+        for (int i = 0; i < nums.length; i++) {
+            int complement = target - nums[i];
+            if (map.containsKey(complement)) {
+                System.out.println("Found pair at indices: [" + map.get(complement) + ", " + i + "]");
+                break;
+            }
+            map.put(nums[i], i);
+        }
     }
 }
 \`\`\`
 
 #### 5. Complexity Summary & Edge Cases
 - **Time Complexity**: $O(N)$ linear time.
-- **Space Complexity**: $O(1)$ constant auxiliary space.
-- **Common Mistakes**: Forgetting to check \`fast.next != null\` causing \`NullPointerException\`.`;
+- **Space Complexity**: $O(N)$ or $O(1)$ auxiliary space.
+- **Common Mistakes**: Off-by-one errors and unchecked edge cases.`;
 }
 
 // -------------------------------------------------------------------------
@@ -495,23 +582,29 @@ app.post('/api/ai/validate-key', async (req, res) => {
     });
 
     await generateWithFallback(testClient, {
-      contents: 'Ping test'
+      contents: 'Ping',
+      maxOutputTokens: 2
     });
 
     return res.json({
       valid: true,
       status: 'Connected',
-      message: 'Gemini API key is connected. AI Mentor is ready to use.'
+      message: 'Your Gemini API key is connected. AI Mentor is ready to use.'
     });
   } catch (err: any) {
-    console.warn('[Validate Key Warning]:', err.message || err);
-    if (apiKey.length > 5) {
+    const errorMsg = (err?.message || '').toLowerCase();
+    console.warn('[Validate Key Error]:', err?.message || err);
+
+    // If it's a quota error (429), the key itself is valid and authentic
+    if (errorMsg.includes('429') || errorMsg.includes('resource_exhausted') || errorMsg.includes('quota')) {
       return res.json({
         valid: true,
         status: 'Connected',
-        message: 'Gemini API key is connected. AI Mentor is ready to use.'
+        message: 'Your Gemini API key is verified and connected.'
       });
     }
+
+    // Authentication failure / Invalid API key (401, 400, API_KEY_INVALID, etc.)
     return res.status(400).json({
       valid: false,
       status: 'Connection Failed',
@@ -532,6 +625,17 @@ app.post('/api/ai/chat', async (req, res) => {
     });
   }
 
+  const queryKey = (message || '').trim().toLowerCase();
+  const cacheKey = `chat_${queryKey}_${context?.tabContext || ''}`;
+  const isSingleQuery = (!history || history.length === 0) && queryKey.length < 150;
+
+  if (isSingleQuery) {
+    const cached = getCachedResponse(cacheKey);
+    if (cached) {
+      return res.json({ text: cached });
+    }
+  }
+
   try {
     const personaInstruction = context?.persona || `You are a world-class personal Java, Data Structures & Algorithms, and Computer Science AI Mentor.
 Your goal is to explain topics, answer questions, provide coding syntax or logic tips, and guide users through solving problems.
@@ -541,9 +645,9 @@ You can answer ANY user questions including:
 - Software Engineering, Web Development, Databases, Operating Systems, Computer Networks
 - System Design, CS Architecture, Node Architecture, and Study Roadmap Planning
 - General educational and general knowledge questions
-Always write clean, readable, compilable Java code examples when requested. Be encouraging, thorough, dynamic, and academically precise. Answer all questions clearly and fully without returning empty or shallow responses.`;
+Always write clean, readable, compilable Java code examples when requested. Be encouraging, thorough, dynamic, and academically precise.`;
 
-    const systemInstruction = `${personaInstruction}\nCurrent student context: ${JSON.stringify(context || {})}`;
+    const systemInstruction = `${personaInstruction}\nCurrent context: ${JSON.stringify(context || {})}`;
 
     const formattedContents = [
       ...(history || []).map((h: any) => ({
@@ -556,13 +660,21 @@ Always write clean, readable, compilable Java code examples when requested. Be e
     const responseText = await generateWithFallback(ai, {
       contents: formattedContents,
       systemInstruction,
-      temperature: 0.7
+      temperature: 0.3
     });
+
+    if (isSingleQuery) {
+      setCachedResponse(cacheKey, responseText);
+    }
 
     res.json({ text: responseText });
   } catch (error: any) {
     console.warn('Gemini Chat fallback generator triggered:', error.message);
-    res.json({ text: generateDynamicChatResponse(message, context) });
+    const dynamicResponse = generateDynamicChatResponse(message, context);
+    if (isSingleQuery) {
+      setCachedResponse(cacheKey, dynamicResponse);
+    }
+    res.json({ text: dynamicResponse });
   }
 });
 
@@ -576,6 +688,12 @@ app.post('/api/ai/explain', async (req, res) => {
       error: 'Gemini API Key Required',
       message: 'Please connect your Gemini API key from Settings to use the AI Mentor.'
     });
+  }
+
+  const cacheKey = `explain_${(topicName || '').trim().toLowerCase()}`;
+  const cached = getCachedResponse(cacheKey);
+  if (cached) {
+    return res.json({ text: cached });
   }
 
   try {
@@ -599,10 +717,13 @@ Include:
       temperature: 0.2
     });
 
+    setCachedResponse(cacheKey, responseText);
     res.json({ text: responseText });
   } catch (error: any) {
     console.error('Gemini Explanation Error:', error);
-    res.json({ text: generateDynamicNotesResponse(topicName) });
+    const dynamic = generateDynamicNotesResponse(topicName);
+    setCachedResponse(cacheKey, dynamic);
+    res.json({ text: dynamic });
   }
 });
 
@@ -618,19 +739,21 @@ app.post('/api/ai/compare', async (req, res) => {
     });
   }
 
-  try {
-    const prompt = `Create an extremely comprehensive, elegant, and structured technical comparison report between "${concept1}" and "${concept2}" in Java Data Structures & Algorithms.
+  const sortedConcepts = [concept1 || '', concept2 || ''].sort().join('_').toLowerCase();
+  const cacheKey = `compare_${sortedConcepts}`;
+  const cached = getCachedResponse(cacheKey);
+  if (cached) {
+    return res.json({ text: cached });
+  }
 
-You MUST cover all of the following points in rich detail:
-1. Definition of both "${concept1}" and "${concept2}"
-2. Core Purpose of both
-3. Key Differences (operational, architectural, memory layout)
-4. Similarities
-5. Best Use Cases for both
-6. Time & Space Complexity Analysis (Access, Search, Insertion, Deletion)
-7. Concrete Real-World Examples
-8. A clear Markdown Comparison Table summarizing all metrics
-9. Complete, well-explained compilable Java Code Comparison Snippet showing how both are declared and traversed.`;
+  try {
+    const prompt = `Create a high-yield technical comparison between "${concept1}" and "${concept2}" in Java DSA.
+Include:
+1. One-Sentence Definitions & Core Purposes
+2. Markdown Comparison Table (Underlying structure, Access Time, Insertion/Deletion, Memory Overhead, Cache Friendliness)
+3. Key Differences & Trade-offs
+4. When to Use Which
+5. Compilable Java Code Comparison Snippet`;
 
     const responseText = await generateWithFallback(ai, {
       contents: prompt,
@@ -638,10 +761,13 @@ You MUST cover all of the following points in rich detail:
       temperature: 0.2
     });
 
+    setCachedResponse(cacheKey, responseText);
     res.json({ text: responseText });
   } catch (error: any) {
     console.error('Gemini Comparison Error:', error);
-    res.json({ text: generateDynamicCompareResponse(concept1, concept2) });
+    const dynamic = generateDynamicCompareResponse(concept1, concept2);
+    setCachedResponse(cacheKey, dynamic);
+    res.json({ text: dynamic });
   }
 });
 
@@ -655,6 +781,12 @@ app.post('/api/ai/notes', async (req, res) => {
       error: 'Gemini API Key Required',
       message: 'Please connect your Gemini API key from Settings to use the AI Mentor.'
     });
+  }
+
+  const cacheKey = `notes_${(topicName || '').trim().toLowerCase()}`;
+  const cached = getCachedResponse(cacheKey);
+  if (cached) {
+    return res.json({ text: cached });
   }
 
   try {
@@ -678,10 +810,13 @@ You MUST provide all of the following structured sections:
       temperature: 0.3
     });
 
+    setCachedResponse(cacheKey, responseText);
     res.json({ text: responseText });
   } catch (error: any) {
     console.error('Gemini Notes Error:', error);
-    res.json({ text: generateDynamicNotesResponse(topicName) });
+    const dynamic = generateDynamicNotesResponse(topicName);
+    setCachedResponse(cacheKey, dynamic);
+    res.json({ text: dynamic });
   }
 });
 
@@ -695,6 +830,12 @@ app.post('/api/ai/problem-guide', async (req, res) => {
       error: 'Gemini API Key Required',
       message: 'Please connect your Gemini API key from Settings to use the AI Mentor.'
     });
+  }
+
+  const cacheKey = `problem_${(problemTitle || '').trim().toLowerCase()}`;
+  const cached = getCachedResponse(cacheKey);
+  if (cached) {
+    return res.json({ text: cached });
   }
 
   try {
@@ -722,10 +863,13 @@ You MUST include all of the following:
       temperature: 0.3
     });
 
+    setCachedResponse(cacheKey, responseText);
     res.json({ text: responseText });
   } catch (error: any) {
     console.error('Gemini Problem Guide Error:', error);
-    res.json({ text: generateDynamicProblemGuideResponse(problemTitle, topicName, difficulty) });
+    const dynamic = generateDynamicProblemGuideResponse(problemTitle, topicName, difficulty);
+    setCachedResponse(cacheKey, dynamic);
+    res.json({ text: dynamic });
   }
 });
 

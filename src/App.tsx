@@ -79,50 +79,57 @@ function ScreenLoadingSkeleton() {
   );
 }
 
+function safeJsonParse<T>(jsonString: string | null, fallback: T): T {
+  if (!jsonString) return fallback;
+  try {
+    const parsed = JSON.parse(jsonString);
+    return parsed !== null && parsed !== undefined ? parsed : fallback;
+  } catch (e) {
+    console.warn('Safe JSON parse fallback triggered for invalid storage:', e);
+    return fallback;
+  }
+}
+
 export default function App() {
-  // --- Persistent State Initialization ---
+  // --- Persistent State Initialization with Safe Parsing ---
   const [profile, setProfile] = useState<UserProfile>(() => {
-    const saved = localStorage.getItem('java_dsa_profile');
-    return saved ? JSON.parse(saved) : DEFAULT_USER_PROFILE;
+    return safeJsonParse<UserProfile>(localStorage.getItem('java_dsa_profile'), DEFAULT_USER_PROFILE);
   });
 
   const [topics, setTopics] = useState<Topic[]>(() => {
-    const saved = localStorage.getItem('java_dsa_topics');
-    return saved ? JSON.parse(saved) : INITIAL_TOPICS;
+    return safeJsonParse<Topic[]>(localStorage.getItem('java_dsa_topics'), INITIAL_TOPICS);
   });
 
   const [problems, setProblems] = useState<Problem[]>(() => {
-    const saved = localStorage.getItem('java_dsa_problems');
-    return saved ? JSON.parse(saved) : INITIAL_PROBLEMS;
+    return safeJsonParse<Problem[]>(localStorage.getItem('java_dsa_problems'), INITIAL_PROBLEMS);
   });
 
   const [roadmap, setRoadmap] = useState<RoadmapDay[]>(() => {
     const saved = localStorage.getItem('java_dsa_roadmap');
-    if (saved) {
-      return JSON.parse(saved);
-    } else {
-      return generateRoadmap(INITIAL_TOPICS, INITIAL_PROBLEMS, DEFAULT_USER_PROFILE);
+    const parsed = safeJsonParse<RoadmapDay[] | null>(saved, null);
+    if (parsed && Array.isArray(parsed) && parsed.length > 0) {
+      return parsed;
     }
+    return generateRoadmap(INITIAL_TOPICS, INITIAL_PROBLEMS, DEFAULT_USER_PROFILE);
   });
 
   const [currentDayNumber, setCurrentDayNumber] = useState<number>(() => {
     const saved = localStorage.getItem('java_dsa_current_day');
-    return saved ? parseInt(saved) : 1;
+    const parsed = saved ? parseInt(saved, 10) : 1;
+    return !isNaN(parsed) && parsed > 0 ? parsed : 1;
   });
 
   const [studySessions, setStudySessions] = useState<any[]>(() => {
-    const saved = localStorage.getItem('java_dsa_study_sessions');
-    return saved ? JSON.parse(saved) : [];
+    return safeJsonParse<any[]>(localStorage.getItem('java_dsa_study_sessions'), []);
   });
 
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
-  const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
+  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
   // --- Phase 7 Cloud Sync & User Accounts States ---
   const [account, setAccount] = useState<AccountObject | null>(() => {
-    const saved = localStorage.getItem('java_dsa_account');
-    return saved ? JSON.parse(saved) : null;
+    return safeJsonParse<AccountObject | null>(localStorage.getItem('java_dsa_account'), null);
   });
 
   const [deviceId] = useState<string>(() => {
@@ -139,8 +146,7 @@ export default function App() {
   });
 
   const [syncRecord, setSyncRecord] = useState<SyncRecordObject | null>(() => {
-    const saved = localStorage.getItem('java_dsa_sync_record');
-    return saved ? JSON.parse(saved) : null;
+    return safeJsonParse<SyncRecordObject | null>(localStorage.getItem('java_dsa_sync_record'), null);
   });
 
   const executeAutoPush = async (): Promise<boolean> => {
@@ -289,47 +295,36 @@ export default function App() {
 
   // --- Core State Mutators & Handlers ---
 
-  const handleRecalculateRemainingRoadmap = (targetProfile?: UserProfile) => {
+  // --- Core State Mutators & Handlers ---
+
+  const handleRecalculateRemainingRoadmap = (
+    targetProfile?: UserProfile,
+    customRoadmap?: RoadmapDay[],
+    customTopics?: Topic[],
+    customProblems?: Problem[]
+  ) => {
     const activeProfile = targetProfile ?? profile;
-    const days = activeProfile.selectedDurationDays || (activeProfile.selectedDurationWeeks * 7);
+    const baseRoadmap = customRoadmap ?? roadmap;
+    const baseTopics = customTopics ?? topics;
+    const baseProblems = customProblems ?? problems;
+    const totalDays = activeProfile.selectedDurationDays || (activeProfile.selectedDurationWeeks * 7);
 
-    // Identify completed days up to current total days
-    const completedDays = roadmap.filter(d => d.status === 'Completed' && d.dayNumber <= days);
-    const completedDaysCount = completedDays.length;
+    // Identify settled historical days (Completed, Skipped, Partial)
+    const settledDays = baseRoadmap.filter(d => 
+      (d.status === 'Completed' || d.status === 'Skipped' || d.status === 'Partial') && d.dayNumber <= totalDays
+    );
+    const settledDaysCount = settledDays.length;
 
-    // Gather completed topics & solved problems from completed days
-    const completedTopicIds = new Set<string>();
-    const solvedProblemIds = new Set<string>();
+    // Determine uncompleted topics and unsolved problems
+    const remainingTopics = baseTopics.filter(t => t.completionStatus !== 'Completed');
+    const remainingProblems = baseProblems.filter(p => p.status !== 'Solved');
 
-    completedDays.forEach(day => {
-      day.assignedTopicIds.forEach(id => completedTopicIds.add(id));
-      day.assignedProblemIds.forEach(id => solvedProblemIds.add(id));
-    });
-
-    // Synced completed status in states
-    setTopics(prev => prev.map(t => {
-      if (completedTopicIds.has(t.id)) {
-        return { ...t, completionStatus: 'Completed' as const };
-      }
-      return t;
-    }));
-    setProblems(prev => prev.map(p => {
-      if (solvedProblemIds.has(p.id)) {
-        return { ...p, status: 'Solved' as const };
-      }
-      return p;
-    }));
-
-    // Re-schedule the remaining (incomplete) topics and problems
-    const remainingTopics = topics.filter(t => t.completionStatus !== 'Completed' && !completedTopicIds.has(t.id));
-    const remainingProblems = problems.filter(p => p.status !== 'Solved' && !solvedProblemIds.has(p.id));
-
-    const remainingDaysCount = days - completedDaysCount;
+    const remainingDaysCount = totalDays - settledDaysCount;
     if (remainingDaysCount > 0) {
       let baseDateObj = new Date(activeProfile.startDate);
-      const lastCompletedDay = completedDays[completedDays.length - 1];
-      if (lastCompletedDay) {
-        baseDateObj = new Date(lastCompletedDay.date);
+      const lastSettledDay = settledDays[settledDays.length - 1];
+      if (lastSettledDay) {
+        baseDateObj = new Date(lastSettledDay.date);
         baseDateObj.setDate(baseDateObj.getDate() + 1);
       }
 
@@ -340,24 +335,24 @@ export default function App() {
       });
 
       const finalRoadmap: RoadmapDay[] = [
-        ...completedDays,
+        ...settledDays,
         ...miniRoadmap.map((day, idx) => ({
           ...day,
-          dayNumber: completedDaysCount + idx + 1
+          dayNumber: settledDaysCount + idx + 1
         }))
       ];
 
       setRoadmap(finalRoadmap);
 
-      const firstPendingDay = finalRoadmap.find(d => d.status !== 'Completed');
+      const firstPendingDay = finalRoadmap.find(d => d.status === 'Pending');
       if (firstPendingDay) {
         setCurrentDayNumber(firstPendingDay.dayNumber);
       } else {
         setCurrentDayNumber(finalRoadmap.length || 1);
       }
     } else {
-      setRoadmap(completedDays);
-      setCurrentDayNumber(completedDays.length || 1);
+      setRoadmap(settledDays);
+      setCurrentDayNumber(settledDays.length || 1);
     }
   };
 
@@ -382,95 +377,56 @@ export default function App() {
       nextProfile.selectedDurationWeeks = Math.ceil(days / 7);
 
       setProfile(nextProfile);
-
-      // Compute combined new roadmap
-      const completedDays = roadmap.filter(d => d.status === 'Completed' && d.dayNumber <= days);
-      const completedDaysCount = completedDays.length;
-
-      const completedTopicIds = new Set<string>();
-      const solvedProblemIds = new Set<string>();
-      completedDays.forEach(day => {
-        day.assignedTopicIds.forEach(id => completedTopicIds.add(id));
-        day.assignedProblemIds.forEach(id => solvedProblemIds.add(id));
-      });
-
-      const remainingTopics = topics.filter(t => !completedTopicIds.has(t.id));
-      const remainingProblems = problems.filter(p => !solvedProblemIds.has(p.id));
-
-      const remainingDaysCount = days - completedDaysCount;
-      if (remainingDaysCount > 0) {
-        let baseDateObj = new Date(nextProfile.startDate);
-        const lastCompletedDay = completedDays[completedDays.length - 1];
-        if (lastCompletedDay) {
-          baseDateObj = new Date(lastCompletedDay.date);
-          baseDateObj.setDate(baseDateObj.getDate() + 1);
-        }
-
-        const miniRoadmap = generateRoadmap(remainingTopics, remainingProblems, {
-          ...nextProfile,
-          startDate: baseDateObj.toISOString().split('T')[0],
-          selectedDurationDays: remainingDaysCount
-        });
-
-        const finalRoadmap: RoadmapDay[] = [
-          ...completedDays,
-          ...miniRoadmap.map((day, idx) => ({
-            ...day,
-            dayNumber: completedDaysCount + idx + 1
-          }))
-        ];
-
-        setRoadmap(finalRoadmap);
-
-        const firstPendingDay = finalRoadmap.find(d => d.status !== 'Completed');
-        if (firstPendingDay) {
-          setCurrentDayNumber(firstPendingDay.dayNumber);
-        } else {
-          setCurrentDayNumber(finalRoadmap.length || 1);
-        }
-      } else {
-        setRoadmap(completedDays);
-        setCurrentDayNumber(completedDays.length || 1);
-      }
+      handleRecalculateRemainingRoadmap(nextProfile);
     } else {
       setProfile(nextProfile);
     }
   };
 
   const handleUpdateDayStatus = (dayNumber: number, status: RoadmapDay['status']) => {
-    let targetDay: RoadmapDay | undefined;
-    setRoadmap((prev) => {
-      const updated = prev.map((d) => (d.dayNumber === dayNumber ? { ...d, status } : d));
-      targetDay = updated.find(d => d.dayNumber === dayNumber);
-      return updated;
-    });
+    const targetDay = roadmap.find(d => d.dayNumber === dayNumber);
+    let nextTopics = topics;
+    let nextProblems = problems;
 
-    // If day was marked Completed, automatically mark all of its topics completed and problems solved
-    if (status === 'Completed') {
-      setTimeout(() => {
-        const foundDay = roadmap.find(d => d.dayNumber === dayNumber) || targetDay;
-        if (foundDay) {
-          setTopics(prev => prev.map(t => {
-            if (foundDay.assignedTopicIds.includes(t.id)) {
-              return { ...t, completionStatus: 'Completed' as const };
-            }
-            return t;
-          }));
-          setProblems(prev => prev.map(p => {
-            if (foundDay.assignedProblemIds.includes(p.id)) {
-              return { ...p, status: 'Solved' as const };
-            }
-            return p;
-          }));
+    if (status === 'Completed' && targetDay) {
+      nextTopics = topics.map(t => {
+        if (targetDay.assignedTopicIds.includes(t.id)) {
+          return {
+            ...t,
+            completionStatus: 'Completed' as const,
+            masteryState: 'Mastered' as const,
+            lastStudiedDate: new Date().toISOString().split('T')[0]
+          };
         }
-      }, 50);
+        return t;
+      });
+      setTopics(nextTopics);
+
+      nextProblems = problems.map(p => {
+        if (targetDay.assignedProblemIds.includes(p.id)) {
+          return {
+            ...p,
+            status: 'Solved' as const,
+            solvedDate: new Date().toISOString().split('T')[0]
+          };
+        }
+        return p;
+      });
+      setProblems(nextProblems);
     }
 
-    // If day was marked Skipped or Partial, trigger recalculation/rebalance for the remaining portion
+    const updatedRoadmap = roadmap.map((d) => (d.dayNumber === dayNumber ? { ...d, status } : d));
+    setRoadmap(updatedRoadmap);
+
     if (status === 'Skipped' || status === 'Partial') {
-      setTimeout(() => {
-        handleRecalculateRemainingRoadmap();
-      }, 100);
+      handleRecalculateRemainingRoadmap(profile, updatedRoadmap, nextTopics, nextProblems);
+    }
+
+    // Advance active day if user finished or resolved the current day
+    if (dayNumber === currentDayNumber && (status === 'Completed' || status === 'Skipped' || status === 'Partial')) {
+      if (dayNumber < roadmap.length) {
+        setCurrentDayNumber(dayNumber + 1);
+      }
     }
   };
 
@@ -575,7 +531,8 @@ export default function App() {
       topics,
       problems,
       roadmap,
-      currentDayNumber
+      currentDayNumber,
+      studySessions
     };
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backupObj, null, 2));
     const downloadAnchor = document.createElement('a');
@@ -601,6 +558,9 @@ export default function App() {
               setRoadmap(parsed.roadmap);
               if (parsed.currentDayNumber) {
                 setCurrentDayNumber(parsed.currentDayNumber);
+              }
+              if (parsed.studySessions && Array.isArray(parsed.studySessions)) {
+                setStudySessions(parsed.studySessions);
               }
               alert('Backup imported successfully!');
             } else {

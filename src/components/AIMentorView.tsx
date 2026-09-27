@@ -368,6 +368,16 @@ function FollowUpChatSection({
   onClearHistory
 }: FollowUpChatSectionProps) {
   const [confirmClear, setConfirmClear] = useState(false);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  }, [messages, isLoading]);
 
   const handleClearClick = () => {
     if (!confirmClear) {
@@ -416,7 +426,7 @@ function FollowUpChatSection({
       </div>
 
       {/* Messages Scroll Box */}
-      <div className="p-4 space-y-3 max-h-[300px] overflow-y-auto">
+      <div ref={messagesContainerRef} className="p-4 space-y-3 max-h-[300px] overflow-y-auto">
         {messages.length === 0 ? (
           <div className="text-center py-6 text-neutral-500 text-xs italic">
             Ask any questions, seek clarifications, or query specific code here!
@@ -557,10 +567,16 @@ What would you like to study first?`,
 
   // --- Sub-tab specific persistent chatbots ---
   const [compareMessages, setCompareMessages] = useState<ChatMessage[]>(() => {
-    const saved = localStorage.getItem('java_dsa_compare_chat');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return parsed.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) }));
+    try {
+      const saved = localStorage.getItem('java_dsa_compare_chat');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) }));
+        }
+      }
+    } catch (e) {
+      console.warn('Failed parsing compare chat history', e);
     }
     return [
       {
@@ -581,10 +597,16 @@ Select two concepts on the left and click **Analyze Differences** to compile a c
   const compareChatBottomRef = useRef<HTMLDivElement>(null);
 
   const [notesMessages, setNotesMessages] = useState<ChatMessage[]>(() => {
-    const saved = localStorage.getItem('java_dsa_notes_chat');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return parsed.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) }));
+    try {
+      const saved = localStorage.getItem('java_dsa_notes_chat');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) }));
+        }
+      }
+    } catch (e) {
+      console.warn('Failed parsing notes chat history', e);
     }
     return [
       {
@@ -603,10 +625,16 @@ Ask me to draft highly structured notes, real-world analogies, code skeletons, o
   const notesChatBottomRef = useRef<HTMLDivElement>(null);
 
   const [problemsMessages, setProblemsMessages] = useState<ChatMessage[]>(() => {
-    const saved = localStorage.getItem('java_dsa_problems_chat');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return parsed.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) }));
+    try {
+      const saved = localStorage.getItem('java_dsa_problems_chat');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) }));
+        }
+      }
+    } catch (e) {
+      console.warn('Failed parsing problems chat history', e);
     }
     return [
       {
@@ -945,8 +973,8 @@ Stuck on a problem or need some practice templates? Ask me!
           context: {
             topicsCount: topics.length,
             problemsCount: problems.length,
-            tabContext: `Concept Comparer Assistant. The user wants help with technical concepts: '${concept1}' and '${concept2}'. Current Report: ${comparisonResult.slice(0, 1500)}`,
-            persona: `You are the Expert Concept Comparison Chatbot. Answer queries regarding technical trade-offs, space-time complexity, CPU cache friendliness, garbage collection pressure, and Java implementation details of '${concept1}' vs '${concept2}'. Be prepared to give code examples, analyze memory profiles, or discuss other related Java collections / DSA topics.`
+            tabContext: `Concept Comparer for '${concept1}' and '${concept2}'`,
+            persona: `You are the Expert Concept Comparison Chatbot. Answer queries regarding technical trade-offs, space-time complexity, CPU cache friendliness, memory profiles, and Java implementation details of '${concept1}' vs '${concept2}'. Always provide clear explanations and compilable Java code examples.`
           }
         })
       });
@@ -1021,8 +1049,8 @@ Stuck on a problem or need some practice templates? Ask me!
           context: {
             topicsCount: topics.length,
             problemsCount: problems.length,
-            tabContext: `Smart Notes Generator Assistant. Selected Topic: '${selectedNoteTopic}'. Current template notes: ${noteTemplateResult.slice(0, 1500)}`,
-            persona: `You are the Note Architect & Study Planner Chatbot. The user wants to study or customize note templates for '${selectedNoteTopic}' or any other requested Java/DSA topic (like basic strings, hashing, trees, etc.). Answer questions about definitions, analogies, standard skeleton code, complexity bounds, or common mistakes. If they ask for notes or smart nodes of specific topics, generate complete, beautiful, highly structured notes instantly in the easiest format possible!`
+            tabContext: `Smart Notes for '${selectedNoteTopic}'`,
+            persona: `You are the Note Architect & Study Planner Chatbot. The user wants to study or customize note templates for '${selectedNoteTopic}' or any other requested Java/DSA topic (like basic strings, hashing, trees, etc.). Answer questions about definitions, analogies, standard skeleton code, complexity bounds, or common mistakes. Generate structured, clean notes and compilable code snippets.`
           }
         })
       });
@@ -1103,8 +1131,8 @@ Stuck on a problem or need some practice templates? Ask me!
           context: {
             topicsCount: topics.length,
             problemsCount: problems.length,
-            tabContext: `Strategic Practice Guide. The user is practicing on problem: '${selectedProblemTitle}'. Current Clues: ${problemGuideResult.slice(0, 1500)}`,
-            persona: `You are the Practice Guide Code Assistant Chatbot. The user wants step-by-step instructions, hints, complexity metrics, or fully runnable code for any Java DSA problem! IMPORTANT: If the user asks for runnable code templates or full programs (like addition, sum of natural numbers, multiplication, largest number, hash maps, linked lists, stacks, binary trees, etc.), you MUST provide fully complete, compilable, and runnable Java code with detailed comments, and explicitly state its Time and Space complexity. Be clear, precise, and highly detailed.`
+            tabContext: `Practice Guide for '${selectedProblemTitle}'`,
+            persona: `You are the Practice Guide Code Assistant Chatbot. The user wants step-by-step instructions, hints, complexity metrics, or fully runnable code for '${selectedProblemTitle}' or any requested Java DSA problem! Always provide complete, compilable, clean Java code with detailed comments, and explicitly state its Time and Space complexity.`
           }
         })
       });
